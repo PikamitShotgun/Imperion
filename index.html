@@ -225,6 +225,11 @@ textarea { width: 100%; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
 .nz-platz .klein { font-size: 13px; padding: 5px 10px; }
 /* Paket 6b: Countdown in der Leiste */
 .computerleiste .cl-netz { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.nz-einrichten { margin: 2px 0 10px 22px; padding: 10px 12px; border: 1px solid rgba(214,178,94,.35); border-radius: 10px; background: rgba(214,178,94,.06); display: grid; gap: 8px; }
+.nz-einrichten label { font-size: 13px; opacity: .85; }
+.nz-einrichten input { width: 100%; box-sizing: border-box; }
+.nz-einrichten .farbwahl { flex-wrap: wrap; }
+.nz-einrichten-knoepfe { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .computerleiste .cl-netz .cl-zeile { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .computerleiste .cl-rest { color: var(--akzent); font-variant-numeric: tabular-nums; }
 @media (max-width: 700px) {
@@ -949,7 +954,8 @@ dialog[open] { animation: dialog-auf .22s ease-out; }
  },
  "spieler": {
   "min": 2,
-  "max": 10
+  "max": 10,
+  "nameMaxZeichen": 20
  },
  "start": {
   "gebieteProSpieler": 4,
@@ -4957,7 +4963,7 @@ const Netz = (() => {
       (Schnellstart neu verteilen / Los geht's) entscheidet der Gastgeber. */
   const GEMEINSAM_GAST = new Set(["rundeBeginnen"]);
   /** Aktionen, die nie ein Gast schicken darf (Paket 6b). */
-  const NUR_GASTGEBER = new Set(["vertreten", "schnellstartNeu", "schnellstartLos"]);
+  const NUR_GASTGEBER = new Set(["vertreten", "platzEinrichten", "schnellstartNeu", "schnellstartLos"]);
 
   const istOnline = (s, i) => !!s?.spieler?.[i]?.online;
   const onlinePlaetze = s => (s?.spieler || []).map((p, i) => (p.online ? i : -1)).filter(i => i >= 0);
@@ -5036,6 +5042,36 @@ const Netz = (() => {
   }
   Spielstand.registriere({ vertreten });
 
+  /** Paket 6c: Name und Farbe eines Online-Platzes dürfen sich nur vor Spielbeginn ändern – solange beim Aufbau
+      noch niemand etwas gewählt hat (Hauptstadtwahl nicht begonnen bzw. Schnellstart noch nicht bestätigt). */
+  function einrichtenMoeglich(s) {
+    return s?.phase === "aufbau" && (s.schritt === "schnellstart" || (s.schritt === "hauptstadt" && s.spieler.every(p => !p.hauptstadt)));
+  }
+  /** Aktion (nur Gastgeber, für den Gast beim Beitreten): wert = { spieler, name, farbe }. Name 1 bis
+      E.spieler.nameMaxZeichen Zeichen und nicht doppelt; Farbe aus E.spielerfarben und noch frei (wer zuerst wählt). */
+  function platzEinrichten(alt, karte, E, D, wert) {
+    const { fehler, protokoll } = Spielstand.intern;
+    const i = wert?.spieler, p = alt?.spieler?.[i];
+    if (!p) fehler("Unbekannter Spieler.");
+    if (!p.online) fehler(`${p.name} spielt nicht online.`);
+    if (!einrichtenMoeglich(alt)) fehler("Name und Farbe lassen sich nur vor Spielbeginn ändern.");
+    const max = E.spieler?.nameMaxZeichen ?? 20;
+    const name = String(wert.name ?? p.name).trim(), farbe = wert.farbe ?? p.farbe;
+    if (!name) fehler("Bitte gib einen Namen ein.");
+    if (name.length > max) fehler(`Der Name darf höchstens ${max} Zeichen haben.`);
+    if (alt.spieler.some((q, j) => j !== i && q.name.toLowerCase() === name.toLowerCase())) fehler(`Den Namen „${name}“ hat schon ein anderer Spieler.`);
+    const f = E.spielerfarben.find(x => x.farbe === farbe);
+    if (!f) fehler("Diese Farbe gibt es nicht.");
+    if (alt.spieler.some((q, j) => j !== i && q.farbe === farbe)) fehler(`Die Farbe ${f.name} hat schon ein anderer Spieler.`);
+    if (name === p.name && farbe === p.farbe) return alt;
+    const s = Spielstand.klon(alt);
+    s.spieler[i].name = name; s.spieler[i].farbe = farbe;
+    const text = name !== p.name ? `${p.name} heißt jetzt ${name}${farbe !== p.farbe ? ` und spielt mit ${f.name}` : ""}.` : `${name} spielt jetzt mit ${f.name}.`;
+    protokoll(s, text, { art: "aufbau", spieler: i });
+    return s;
+  }
+  Spielstand.registriere({ platzEinrichten });
+
   /** Paket 6b (Nachtrag): Herzschlag. Takt und Stille in Millisekunden aus den Einstellungen. */
   function herzschlag(E) {
     const O = E?.online || {};
@@ -5045,7 +5081,7 @@ const Netz = (() => {
   function zuStill(zuletzt, jetzt, E) { return jetzt - zuletzt > herzschlag(E).stilleMs; }
   /** Gastgeber und Gast müssen dieselbe Version haben (Regeln, Karten, Balancing). */
   function versionPasst(a, b) { return typeof a === "string" && a === b; }
-  return { VERDECKT, GEMEINSAM_GAST, NUR_GASTGEBER, istOnline, onlinePlaetze, sichtFuer, darf, angebotGrund, vertreten, herzschlag, zuStill, versionPasst };
+  return { VERDECKT, GEMEINSAM_GAST, NUR_GASTGEBER, istOnline, onlinePlaetze, sichtFuer, darf, angebotGrund, vertreten, einrichtenMoeglich, platzEinrichten, herzschlag, zuStill, versionPasst };
 })();
 if (typeof module !== "undefined") module.exports = { Netz };
 </script>
@@ -6749,6 +6785,32 @@ const Tests = (() => {
       t(G2, "Version: nur dieselbe Version darf mitspielen; ältere Spielstände bekommen die Herzschlag-Werte ergänzt",
         Netz.versionPasst("6b", "6b") && !Netz.versionPasst("6b", "6a") && !Netz.versionPasst(undefined, "6b") &&
         neuE.online.herzschlagSekunden === O.herzschlagSekunden && neuE.online.stilleBisTrennungSekunden === O.stilleBisTrennungSekunden); }
+    // Paket 6c: Name und Farbe beim Beitreten
+    { const G3 = "Mehrspieler (Name und Farbe beim Beitreten)", farben = E.spielerfarben.map(f => f.farbe);
+      const neu = schnell => Spielstand.neuesSpiel(karte, E, D, { spieler: [{ name: "Host", farbe: farben[0] }, { name: "Gast", farbe: farben[1], online: true }, { name: "Comp", farbe: farben[2], computer: true }], saat: 21, schnellstart: schnell });
+      const wirftR = f => { try { f(); return false; } catch (e) { return e instanceof Spielstand.Regelfehler; } };
+      const a0 = neu(false), a1 = Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 1, name: "  Finn ", farbe: farben[5] });
+      t(G3, "Vor Spielbeginn: der Gast setzt Name (ohne Leerzeichen am Rand) und eine freie Farbe, Eintrag im Protokoll; Höchstlänge in der Einstellungsdatei",
+        typeof E.spieler.nameMaxZeichen === "number" && E.spieler.nameMaxZeichen > 0 && Netz.einrichtenMoeglich(a0) &&
+        a1.spieler[1].name === "Finn" && a1.spieler[1].farbe === farben[5] && a1.protokoll.at(-1).text.startsWith("Gast heißt jetzt Finn") && a1.protokoll.at(-1).spieler === 1 &&
+        Spielstand.fuehreAus(a1, karte, E, D, "platzEinrichten", { spieler: 1, name: "Finn", farbe: farben[5] }) === a1);
+      const lang = "x".repeat(E.spieler.nameMaxZeichen + 1);
+      t(G3, "Abgelehnt: leerer, zu langer oder doppelter Name (auch in anderer Schreibweise), vergebene oder unbekannte Farbe, Platz nicht online",
+        wirftR(() => Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 1, name: "  " })) &&
+        wirftR(() => Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 1, name: lang })) &&
+        wirftR(() => Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 1, name: "host" })) &&
+        wirftR(() => Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 1, name: "Finn", farbe: farben[0] })) &&
+        wirftR(() => Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 1, name: "Finn", farbe: "#123456" })) &&
+        wirftR(() => Spielstand.fuehreAus(a0, karte, E, D, "platzEinrichten", { spieler: 0, name: "Finn" })));
+      const wer = Computer.offeneEntscheidung(a0);
+      let nachWahl = null;
+      for (const g of a0.spieler[wer?.spieler ?? 0].gebietskarten) { try { nachWahl = Spielstand.fuehreAus(a0, karte, E, D, "waehleHauptstadt", g); break; } catch (e) { /* nächste Karte */ } }
+      const s0 = neu(true), lauf = Spielstand.fuehreAus(s0, karte, E, D, "schnellstartLos", {});
+      t(G3, "Nach Spielbeginn nicht mehr: nach der ersten Hauptstadtwahl bzw. nach „Los geht's“ abgelehnt; beim Schnellstart vorher erlaubt; nie direkt von einem Gast",
+        !!nachWahl && !Netz.einrichtenMoeglich(nachWahl) && wirftR(() => Spielstand.fuehreAus(nachWahl, karte, E, D, "platzEinrichten", { spieler: 1, name: "Finn" })) &&
+        Netz.einrichtenMoeglich(s0) && Spielstand.fuehreAus(s0, karte, E, D, "platzEinrichten", { spieler: 1, name: "Finn" }).spieler[1].name === "Finn" &&
+        !Netz.einrichtenMoeglich(lauf) && !Netz.einrichtenMoeglich(inRunde(karte, E, D, 3, 13)) &&
+        [0, 1, 2].every(j => typeof Netz.darf(a0, j, "platzEinrichten", { spieler: 1, name: "Finn" }) === "string")); }
     const vs = Spielstand.klon(inRunde(karte, E, D, 3, 13)); vs.spieler[1].online = true;
     const vs2 = Spielstand.fuehreAus(vs, karte, E, D, "vertreten", { spieler: 1, an: true });
     t(G2, "Vertretung an: der Computer spielt den Online-Platz in der Stufe aus den Einstellungen, Eintrag im Protokoll",
@@ -9165,7 +9227,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
     const aktiv = ns.spieler.slice(0, ns.anzahl);
     $("#ns-spieler").innerHTML = aktiv.map((p, i) => `<div class="ns-spieler">
       <span class="nr">${i + 1}.</span>
-      <div class="ns-name"><input type="text" id="ns-name-${i}" value="${esc(p.name)}" placeholder="${p.computer ? `Computer ${i + 1}` : p.online ? `Name des Online-Spielers ${i + 1}` : `Name von Spieler ${i + 1}`}" maxlength="20" data-name="${i}" aria-label="Name von Spieler ${i + 1}">
+      <div class="ns-name"><input type="text" id="ns-name-${i}" value="${esc(p.name)}" placeholder="${p.computer ? `Computer ${i + 1}` : p.online ? `Name des Online-Spielers ${i + 1}` : `Name von Spieler ${i + 1}`}" maxlength="${STANDARD_E.spieler.nameMaxZeichen || 20}" data-name="${i}" aria-label="Name von Spieler ${i + 1}">
       <button class="knopf klein ns-art ${p.computer || p.online ? "an" : ""}" data-computer="${i}" aria-pressed="${!!(p.computer || p.online)}" title="Wer spielt diesen Platz? (Mensch → Computer → Computer leicht${NETZ_MOEGLICH ? " → Online" : ""})">${p.online ? "Online" : !p.computer ? "Mensch" : p.stufe === "leicht" ? "Computer leicht" : "Computer"}</button></div>
       <div class="farbwahl" role="group" aria-label="Farbe von Spieler ${i + 1}">${STANDARD_E.spielerfarben.map(f => {
         const belegt = aktiv.some((q, j) => j !== i && q.farbe === f.farbe);
@@ -9578,7 +9640,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
 
   // ---------- Paket 8: Web-App (Offline, Installation, Version) ----------
   // Nur außerhalb von Claude: Manifest und Service Worker liegen als eigene Dateien neben der Seite.
-  const VERSION = "6b.2 · 26.11.2026";
+  const VERSION = "6c · 26.11.2026";
   let installHinweis = null;
   const alsApp = () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   function appStatus() {
@@ -9771,7 +9833,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
     });
   }
   function lobby() {
-    return { t: "lobby", titel: STANDARD_E.titel, version: VERSION, karte: roh.name || "", plaetze: spiel.spieler.map((p, i) => ({
+    return { t: "lobby", titel: STANDARD_E.titel, version: VERSION, karte: roh.name || "", einrichten: Netz.einrichtenMoeglich(spiel), farben: E.spielerfarben, nameMax: E.spieler?.nameMaxZeichen || 20, plaetze: spiel.spieler.map((p, i) => ({
       name: p.name, farbe: p.farbe, art: p.computer ? "computer" : p.online ? "online" : "gastgeber", frei: !!p.online && !netz.verbindungen.has(i), vertreten: !!p.vertretung, ausgeschieden: !!p.ausgeschieden })) };
   }
   function lobbyAnAlle() { if (netz.rolle !== "gastgeber" || !spiel) return; const l = lobby(); for (const g of netz.gaeste) if (g.platz === null) sende(g.c, l); }
@@ -9806,6 +9868,10 @@ if (typeof module !== "undefined") module.exports = { Tests };
       const p = m.platz;
       if (!spiel.spieler[p]?.online) { sende(g.c, { t: "fehler", titel: "Platz nicht möglich", text: "Dieser Platz wird nicht online gespielt." }); return; }
       if (netz.verbindungen.has(p) && netz.tokens[p] !== m.token) { sende(g.c, { t: "fehler", titel: "Platz besetzt", text: "Diesen Platz hat schon jemand." }); sende(g.c, lobby()); return; }
+      if ((m.name !== undefined || m.farbe !== undefined) && Netz.einrichtenMoeglich(spiel)) {   // Paket 6c: Name und Farbe des Gasts
+        const ok = aktion("platzEinrichten", { spieler: p, name: m.name, farbe: m.farbe }, { computer: true, fehler: text => { sende(g.c, { t: "fehler", titel: "So geht es nicht", text }); sende(g.c, lobby()); } });
+        if (!ok) return;
+      }
       gibPlatz(g, p, m.token); return;
     }
     if (g.platz === null) return;
@@ -9900,9 +9966,9 @@ if (typeof module !== "undefined") module.exports = { Tests };
     if (m.t === "ping") { if (netz.c) { netz.c.herzschlag = true; sende(netz.c, { t: "pong" }); } return; }
     if (m.t === "version" || ((m.t === "lobby" || m.t === "willkommen") && !Netz.versionPasst(m.version, VERSION))) { andereVersion(m.t === "version" ? m.gastgeber : m.version); return; }
     if (m.quittiert !== undefined) netz.quittiert = Math.max(netz.quittiert || 0, m.quittiert);
-    if (m.t === "lobby") { netz.lobby = m; renderNetz(); if (netz.platz === null && !$("#netzdialog").open) oeffneNetz(); return; }
+    if (m.t === "lobby") { netz.lobby = m; if (netz.wahl && (!m.einrichten || !m.plaetze[netz.wahl.platz]?.frei)) netz.wahl = null; renderNetz(); if (netz.platz === null && !$("#netzdialog").open) oeffneNetz(); return; }
     if (m.t === "willkommen") {
-      netz.platz = m.platz; netz.lobby = null; netz.versionGastgeber = m.version;
+      netz.platz = m.platz; netz.lobby = null; netz.wahl = null; netz.versionGastgeber = m.version;
       E = Spielstand.ergaenzeEinstellungen(m.E || STANDARD_E, STANDARD_E);
       if (JSON.stringify(m.karte) !== JSON.stringify(roh)) setzeKarte(m.karte, JSON.stringify(m.karte) === JSON.stringify(STANDARD_KARTE));
       auswahl = null; freigegeben = null; entwurf = null; uebergabeZiel = null; spielleiter = false; ui.zug = { von: null, nach: null, truppen: 1 };
@@ -10087,6 +10153,16 @@ if (typeof module !== "undefined") module.exports = { Tests };
   function platzZeile(p, i, status) {
     return `<div class="nz-platz"><span class="farbpunkt" style="background:${esc(p.farbe)}"></span><strong>${esc(p.name)}</strong><span class="nz-status ${status.klasse || ""}">${status.text}</span>${status.knopf || ""}</div>`;
   }
+  /** Paket 6c: Gast wählt vor Spielbeginn Name und Farbe für den Platz (Vorgabe: Name und Farbe vom Gastgeber). */
+  function einrichtenFormular(l, i) {
+    const w = netz.wahl, farben = l.farben || STANDARD_E.spielerfarben;
+    return `<div class="nz-einrichten"><label for="nz-name">Dein Name</label>
+      <input type="text" id="nz-name" value="${esc(w.name)}" maxlength="${l.nameMax || 20}" autocomplete="nickname" aria-label="Dein Name">
+      <div class="farbwahl" role="group" aria-label="Deine Farbe">${farben.map(f => {
+        const belegt = l.plaetze.some((q, j) => j !== i && q.farbe === f.farbe);
+        return `<button style="background:${f.farbe}" class="${w.farbe === f.farbe ? "an" : ""}" data-nz-farbe="${f.farbe}" title="${esc(f.name)}${belegt ? " (schon vergeben)" : ""}" aria-label="${esc(f.name)}" aria-pressed="${w.farbe === f.farbe}" ${belegt ? "disabled" : ""}></button>`; }).join("")}</div>
+      <div class="nz-einrichten-knoepfe"><button class="knopf klein" data-nz="wahlzurueck">Anderer Platz</button><button class="haupt klein" data-nz="beitreten">Mit diesem Namen beitreten</button></div></div>`;
+  }
   function renderNetz() {
     const knopfOnline = $("#knopf-online");
     knopfOnline.hidden = !NETZ_MOEGLICH;
@@ -10122,7 +10198,8 @@ if (typeof module !== "undefined") module.exports = { Tests };
         ${status ? `<p class="hinweis">${esc(status)}</p>` : ""}
         ${l ? `<p class="hinweis">${esc(l.karte)}${l.version && l.version !== VERSION ? ` · Achtung: Gastgeber Version ${esc(l.version)}, du ${esc(VERSION)} – bitte beide aktualisieren` : ""}</p>
           <div class="nz-plaetze">${l.plaetze.map((p, i) => platzZeile(p, i, p.art === "computer" ? { text: "Computer" } : p.art === "gastgeber" ? { text: "am Gerät des Gastgebers" }
-            : p.frei ? { text: p.vertreten ? "online · frei (Computer vertritt)" : "online · frei", klasse: "gut", knopf: `<button class="haupt klein" data-nz-platz="${i}">Diesen Platz nehmen</button>` } : { text: "online · besetzt" })).join("")}</div>
+            : p.frei ? { text: p.vertreten ? "online · frei (Computer vertritt)" : "online · frei", klasse: "gut", knopf: netz.wahl?.platz === i ? "" : `<button class="haupt klein" data-nz-platz="${i}">Diesen Platz nehmen</button>` } : { text: "online · besetzt" })
+            + (netz.wahl?.platz === i && p.frei ? einrichtenFormular(l, i) : "")).join("")}</div>
           ${l.plaetze.some(p => p.frei) ? "" : `<p class="hinweis">Alle Online-Plätze sind besetzt.</p>`}` : ""}`;
       knoepfe = `<button class="knopf" data-nz="abbrechen">${netz.rolle === "gast" ? "Abbrechen" : "Schließen"}</button>`;
     }
@@ -10132,11 +10209,19 @@ if (typeof module !== "undefined") module.exports = { Tests };
     $("#nz-knoepfe").innerHTML = knoepfe;
     $("#nz-fehler").textContent = netz.rolle === "gast" && netz.status === "fehler" ? netz.fehler : netz.rolle !== "gastgeber" && netz.fehler && netz.rolle !== "gast" ? netz.fehler : "";
     if (fokus === "nz-code-eingabe") { const e = $("#nz-code-eingabe"); if (e) { e.focus(); e.setSelectionRange(e.value.length, e.value.length); } }
+    if (fokus === "nz-name" || netz.wahlFokus) { netz.wahlFokus = false; const e = $("#nz-name"); if (e) { e.focus(); e.setSelectionRange(e.value.length, e.value.length); } }
   }
   $("#netzdialog").addEventListener("click", async e => {
     const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.nzPlatz !== undefined) { sende(netz.c, { t: "platz", platz: +b.dataset.nzPlatz, token: netz.token }); return; }
+    if (b.dataset.nzPlatz !== undefined) {
+      const i = +b.dataset.nzPlatz, l = netz.lobby;
+      if (l?.einrichten && l.plaetze[i]) { netz.wahl = { platz: i, name: l.plaetze[i].name, farbe: l.plaetze[i].farbe }; netz.wahlFokus = true; renderNetz(); return; }
+      sende(netz.c, { t: "platz", platz: i, token: netz.token }); return;
+    }
+    if (b.dataset.nzFarbe !== undefined) { if (netz.wahl) { netz.wahl.farbe = b.dataset.nzFarbe; renderNetz(); } return; }
     const a = b.dataset.nz;
+    if (a === "beitreten") { einrichtenSenden(); return; }
+    if (a === "wahlzurueck") { netz.wahl = null; renderNetz(); return; }
     if (a === "verbinden") gastVerbinden($("#nz-code-eingabe").value);
     else if (a === "abbrechen") { if (netz.rolle === "gast") netzBeenden(); $("#netzdialog").close(); }
     else if (a === "schliessen") $("#netzdialog").close();
@@ -10153,6 +10238,15 @@ if (typeof module !== "undefined") module.exports = { Tests };
   });
   $("#netzdialog").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "nz-code-eingabe") { e.preventDefault(); gastVerbinden(e.target.value); } });
   $("#netzdialog").addEventListener("cancel", e => { if (netz.warten) e.preventDefault(); });
+  function einrichtenSenden() {
+    const w = netz.wahl; if (!w || !netz.c) return;
+    const name = ($("#nz-name")?.value ?? w.name).trim(), max = netz.lobby?.nameMax || 20;
+    if (!name) { zeigeFehler("Name fehlt", "Bitte gib einen Namen ein."); return; }
+    if (name.length > max) { zeigeFehler("Name zu lang", `Der Name darf höchstens ${max} Zeichen haben.`); return; }
+    sende(netz.c, { t: "platz", platz: w.platz, token: netz.token, name, farbe: w.farbe });
+  }
+  $("#netzdialog").addEventListener("input", e => { if (e.target.id === "nz-name" && netz.wahl) netz.wahl.name = e.target.value; });
+  $("#netzdialog").addEventListener("keydown", e => { if (e.target.id === "nz-name" && e.key === "Enter") { e.preventDefault(); einrichtenSenden(); } });
   $("#netzdialog").addEventListener("close", () => { netz.bestaetigen = false; if (spiel) render(); });
   $("#knopf-online").onclick = () => oeffneNetz();
   // Gast: Spielleiter-Modus gibt es nur beim Gastgeber
