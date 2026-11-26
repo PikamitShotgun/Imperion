@@ -928,9 +928,11 @@ dialog[open] { animation: dialog-auf .22s ease-out; }
 <script type="application/json" id="daten-einstellungen">{
  "titel": "Imperion",
  "online": {
-  "hinweis": "Online-Spiel (Paket 6): Verliert ein Online-Spieler die Verbindung, spielt nach vertretungNachSekunden der Computer in der Stufe vertretungStufe für ihn, bis er zurück ist.",
+  "hinweis": "Online-Spiel (Paket 6): Der Gastgeber fragt alle herzschlagSekunden bei jedem Gerät nach; kommt stilleBisTrennungSekunden lang nichts an, gilt das Gerät als getrennt. Danach spielt nach vertretungNachSekunden der Computer in der Stufe vertretungStufe für den Spieler, bis er zurück ist.",
   "vertretungNachSekunden": 60,
-  "vertretungStufe": "normal"
+  "vertretungStufe": "normal",
+  "herzschlagSekunden": 2,
+  "stilleBisTrennungSekunden": 10
  },
  "kartenwahl": {
   "hinweis": "Eingebaute Karten im Dialog Neues Spiel, in dieser Reihenfolge; spielerMin/spielerMax = Empfehlung (spielen geht mit jeder erlaubten Spielerzahl)",
@@ -5034,7 +5036,16 @@ const Netz = (() => {
   }
   Spielstand.registriere({ vertreten });
 
-  return { VERDECKT, GEMEINSAM_GAST, NUR_GASTGEBER, istOnline, onlinePlaetze, sichtFuer, darf, angebotGrund, vertreten };
+  /** Paket 6b (Nachtrag): Herzschlag. Takt und Stille in Millisekunden aus den Einstellungen. */
+  function herzschlag(E) {
+    const O = E?.online || {};
+    return { taktMs: 1000 * (O.herzschlagSekunden ?? 2), stilleMs: 1000 * (O.stilleBisTrennungSekunden ?? 10) };
+  }
+  /** true, wenn von einem Gerät zu lange nichts angekommen ist (zuletzt/jetzt in ms). */
+  function zuStill(zuletzt, jetzt, E) { return jetzt - zuletzt > herzschlag(E).stilleMs; }
+  /** Gastgeber und Gast müssen dieselbe Version haben (Regeln, Karten, Balancing). */
+  function versionPasst(a, b) { return typeof a === "string" && a === b; }
+  return { VERDECKT, GEMEINSAM_GAST, NUR_GASTGEBER, istOnline, onlinePlaetze, sichtFuer, darf, angebotGrund, vertreten, herzschlag, zuStill, versionPasst };
 })();
 if (typeof module !== "undefined") module.exports = { Netz };
 </script>
@@ -6727,6 +6738,17 @@ const Tests = (() => {
     // ---------- Paket 6b: Vertretung durch den Computer ----------
     const G2 = "Mehrspieler (Vertretung durch den Computer)", O = E.online || {};
     t(G2, "Zeit bis zur Vertretung und Stufe stehen in der Einstellungsdatei (E.online)", typeof O.vertretungNachSekunden === "number" && O.vertretungNachSekunden > 0 && typeof O.vertretungStufe === "string" && !!E.computer?.stufen?.[O.vertretungStufe]);
+    // Nachtrag: Herzschlag und Version
+    t(G2, "Herzschlag: Takt und Stille bis zur Trennung stehen in der Einstellungsdatei, die Stille ist länger als der Takt",
+      typeof O.herzschlagSekunden === "number" && typeof O.stilleBisTrennungSekunden === "number" && O.herzschlagSekunden > 0 && O.stilleBisTrennungSekunden > 2 * O.herzschlagSekunden);
+    { const hs = Netz.herzschlag(E), t0 = 1000000;
+      t(G2, "Herzschlag: ein Gerät gilt erst als getrennt, wenn länger als die eingestellte Stille nichts ankommt",
+        !Netz.zuStill(t0, t0 + hs.taktMs, E) && !Netz.zuStill(t0, t0 + hs.stilleMs, E) && Netz.zuStill(t0, t0 + hs.stilleMs + 1, E)); }
+    { const altE = Spielstand.klon(E); delete altE.online.herzschlagSekunden; delete altE.online.stilleBisTrennungSekunden;
+      const neuE = Spielstand.ergaenzeEinstellungen(altE, E);
+      t(G2, "Version: nur dieselbe Version darf mitspielen; ältere Spielstände bekommen die Herzschlag-Werte ergänzt",
+        Netz.versionPasst("6b", "6b") && !Netz.versionPasst("6b", "6a") && !Netz.versionPasst(undefined, "6b") &&
+        neuE.online.herzschlagSekunden === O.herzschlagSekunden && neuE.online.stilleBisTrennungSekunden === O.stilleBisTrennungSekunden); }
     const vs = Spielstand.klon(inRunde(karte, E, D, 3, 13)); vs.spieler[1].online = true;
     const vs2 = Spielstand.fuehreAus(vs, karte, E, D, "vertreten", { spieler: 1, an: true });
     t(G2, "Vertretung an: der Computer spielt den Online-Platz in der Stufe aus den Einstellungen, Eintrag im Protokoll",
@@ -9556,7 +9578,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
 
   // ---------- Paket 8: Web-App (Offline, Installation, Version) ----------
   // Nur außerhalb von Claude: Manifest und Service Worker liegen als eigene Dateien neben der Seite.
-  const VERSION = "6b · 23.11.2026";
+  const VERSION = "6b.2 · 26.11.2026";
   let installHinweis = null;
   const alsApp = () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   function appStatus() {
@@ -9614,9 +9636,9 @@ if (typeof module !== "undefined") module.exports = { Tests };
 
   // ---------- Verbindung (austauschbar: PeerJS oder lokaler Testbetrieb) ----------
   function verbindungAus(senden, schliessen) {
-    const c = { daten: [], ende: [], zu: false, senden, schliessen };
+    const c = { daten: [], ende: [], zu: false, senden, schliessen, zuletzt: Date.now() };
     c.beiDaten = f => c.daten.push(f); c.beiEnde = f => c.ende.push(f);
-    c.empfangen = d => c.daten.forEach(f => f(d));
+    c.empfangen = d => { c.zuletzt = Date.now(); c.daten.forEach(f => f(d)); };
     c.beenden = () => { if (c.zu) return; c.zu = true; c.ende.forEach(f => f()); };
     return c;
   }
@@ -9767,12 +9789,20 @@ if (typeof module !== "undefined") module.exports = { Tests };
   }
   function vonGast(g, m) {
     if (netz.rolle !== "gastgeber" || !spiel) return;
+    if (m.t === "pong") return;   // Herzschlag – c.zuletzt ist schon aktualisiert
     if (m.t === "hallo") {
+      g.version = m.version;
+      if (!Netz.versionPasst(m.version, VERSION)) {   // Nachtrag 6b: andere Version darf nicht mitspielen
+        sende(g.c, { t: "version", gastgeber: VERSION });
+        setTimeout(() => { try { g.c.schliessen(); } catch (e) {} g.c.beenden(); }, 1500);
+        return;
+      }
       const p = Object.keys(netz.tokens).map(Number).find(i => netz.tokens[i] === m.token && spiel.spieler[i]?.online);
       if (p !== undefined) gibPlatz(g, p, m.token); else sende(g.c, lobby());
       return;
     }
     if (m.t === "platz") {
+      if (!Netz.versionPasst(g.version, VERSION)) return;
       const p = m.platz;
       if (!spiel.spieler[p]?.online) { sende(g.c, { t: "fehler", titel: "Platz nicht möglich", text: "Dieser Platz wird nicht online gespielt." }); return; }
       if (netz.verbindungen.has(p) && netz.tokens[p] !== m.token) { sende(g.c, { t: "fehler", titel: "Platz besetzt", text: "Diesen Platz hat schon jemand." }); sende(g.c, lobby()); return; }
@@ -9867,6 +9897,8 @@ if (typeof module !== "undefined") module.exports = { Tests };
   }
   function vomGastgeber(m) {
     if (netz.rolle !== "gast") return;
+    if (m.t === "ping") { if (netz.c) { netz.c.herzschlag = true; sende(netz.c, { t: "pong" }); } return; }
+    if (m.t === "version" || ((m.t === "lobby" || m.t === "willkommen") && !Netz.versionPasst(m.version, VERSION))) { andereVersion(m.t === "version" ? m.gastgeber : m.version); return; }
     if (m.quittiert !== undefined) netz.quittiert = Math.max(netz.quittiert || 0, m.quittiert);
     if (m.t === "lobby") { netz.lobby = m; renderNetz(); if (netz.platz === null && !$("#netzdialog").open) oeffneNetz(); return; }
     if (m.t === "willkommen") {
@@ -9891,6 +9923,11 @@ if (typeof module !== "undefined") module.exports = { Tests };
     if (m.t === "handel") { ui.handelStatus = { kennung: spiel ? zugKennung(spiel) : null, text: m.text }; if (m.ok) ui.handel = { mit: ui.handel.mit, gibt: { nahrung: 0, eisen: 0, gold: 0 }, bekommt: { nahrung: 0, eisen: 0, gold: 0 } }; render(); return; }
     if (m.t === "angebot") { zeigeAnfrage(m); return; }
     if (m.t === "ende") { const text = m.text || "Der Gastgeber hat das Online-Spiel beendet."; netzVerlassen(); zeigeFehler("Online-Spiel beendet", text); }
+  }
+  /** Gast: Gastgeber hat eine andere Version – nicht mitspielen, nicht neu verbinden. */
+  function andereVersion(v) {
+    netzVerlassen();
+    zeigeFehler("Andere Version", `Der Gastgeber hat Version ${v || "(unbekannt)"}, du hast Version ${VERSION}. Alle Geräte brauchen dieselbe Version (wegen Regeln, Karten und Balancing). Bitte auf dem Gerät mit der älteren Version die App ganz schließen und neu öffnen bzw. die Seite neu laden, dann noch einmal beitreten.`);
   }
   /** Gast: Aktion an den Gastgeber schicken (statt sie hier auszuführen). */
   function gastAktion(name, wert) {
@@ -10028,6 +10065,21 @@ if (typeof module !== "undefined") module.exports = { Tests };
       for (const [p, t0] of Object.entries(netz.getrennt)) if (jetzt - t0 >= T) vertretungAn(+p);
     }
     aktualisiereComputerleiste();
+  }, 1000);
+
+  // ---------- Nachtrag 6b: Herzschlag ----------
+  // Eine Trennung meldet die Verbindung nicht immer (WLAN aus, Handy gesperrt, App weggewischt). Deshalb schickt
+  // der Gastgeber regelmäßig „ping“, die Gäste antworten „pong“. Kommt zu lange nichts an, wird die Verbindung
+  // geschlossen – beim Gastgeber startet dann der Countdown, der Gast verbindet sich neu. Ein Gast prüft erst,
+  // nachdem der erste „ping“ angekommen ist.
+  setInterval(() => {
+    if (!netz.rolle) return;
+    const jetzt = Date.now(), hs = Netz.herzschlag(E);
+    const zu = c => { try { c.schliessen(); } catch (e) {} c.beenden(); };
+    if (netz.rolle === "gastgeber") {
+      if (jetzt - (netz.letzterPing || 0) >= hs.taktMs) { netz.letzterPing = jetzt; for (const g of netz.gaeste) sende(g.c, { t: "ping" }); }
+      for (const g of [...netz.gaeste]) if (Netz.zuStill(g.c.zuletzt, jetzt, E)) zu(g.c);
+    } else if (netz.rolle === "gast" && netz.c && netz.c.herzschlag && Netz.zuStill(netz.c.zuletzt, jetzt, E)) zu(netz.c);
   }, 1000);
 
   // ---------- Dialog „Online-Spiel“ ----------
