@@ -711,14 +711,191 @@ dialog[open] { animation: dialog-auf .22s ease-out; }
   .lb-bunker { font-size: 10px; padding: 2px 7px; white-space: nowrap; }
   .lb-gegen { font-size: 11px; }
 }
+
+/* ===================== Paket 1a (neu): Grundgerüst des Bildschirms ===================== */
+:root { --kopf-h: 46px; --panel-b: clamp(270px, 34vw, 340px); }
+header { flex-wrap: nowrap !important; height: var(--kopf-h); min-height: var(--kopf-h); padding: 0 10px !important; gap: 8px !important; box-sizing: border-box; }
+header .emblem { width: 28px; height: 28px; flex: none; }
+header h1 { font-size: 20px !important; white-space: nowrap; }
+.kopf-mitte { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: safe center; gap: 6px; overflow: hidden; }
+.kopf-runde { font: 700 13px/1 var(--display); padding: 7px 10px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid #2b3958; color: #c9d2e3; white-space: nowrap; }
+.kopf-status { font: 600 14px/1.1 var(--display); color: #c9d2e3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.kopf-status .farbpunkt { width: 10px; height: 10px; border-width: 1px; vertical-align: -1px; margin-right: 4px; }
+.kopf-phasen { display: flex; gap: 4px; }
+.kopf-phase { font: 600 14px/1 var(--display); padding: 8px 11px; border-radius: 8px; border: 1px solid #2b3958; color: #b8c3d9; background: rgba(255,255,255,.04); white-space: nowrap; cursor: pointer; }
+.kopf-phase:disabled { cursor: default; }
+.kopf-phase.fertig { color: #6f7b92; text-decoration: line-through; text-decoration-color: rgba(255,255,255,.25); }
+.kopf-phase.an { color: #111; background: linear-gradient(180deg, #ffe38a, #ffd34d 55%, #d9a530); border-color: #b9831c; font-weight: 700; }
+.kopf-phase:not(.an):not(:disabled):hover { border-color: #ffd34d; color: #fff; }
+.kopf-phase .lang { display: none; }
+.kopf-knopf { font: 700 14px/1 var(--display); padding: 8px 12px; border-radius: 8px; border: 1px solid #4a5a80; background: #22304f; color: #e8ecf4; white-space: nowrap; cursor: pointer; }
+.kopf-knopf.gold { color: #111; background: linear-gradient(180deg, #ffe38a, #ffd34d 55%, #d9a530); border-color: #b9831c; }
+.kopf-knopf:hover { border-color: #ffd34d; }
+header .werkzeuge { flex: none; flex-wrap: nowrap !important; gap: 5px !important; margin-left: 0 !important; }
+.kopf-sym { display: inline-flex !important; align-items: center; gap: 5px; padding: 0 9px !important; height: 34px; }
+.kopf-sym svg { width: 17px; height: 17px; flex: none; }
+.kopf-sym .kopf-text { display: none; }
+#knopf-menue[aria-pressed="true"] { background: rgba(255,211,77,.16); border-color: #b9831c; color: #ffe38a; }
+body.menue-zu #knopf-menue .pfeil { transform: translateX(-20px) scaleX(-1); transform-origin: 10px 10px; }
+.mehrmenue { position: absolute; top: calc(var(--kopf-h) - 2px); right: 8px; z-index: 30; display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  min-width: 210px; max-height: calc(100vh - var(--kopf-h) - 12px); overflow-y: auto; padding: 10px; border-radius: 12px;
+  background: rgba(14,20,36,.97); border: 1px solid #2b3958; box-shadow: 0 14px 34px rgba(0,0,0,.55); }
+.mehrmenue[hidden] { display: none; }
+.mehrmenue .knopf { text-align: left; justify-content: flex-start; }
+.mehrmenue .kartenname { padding: 2px 4px 0; color: #c9d2e3; font-style: italic; }
+.mehrmenue .status-pill { align-self: flex-start; }
+header .werkzeuge > .knopf:not(.kopf-sym) { height: 34px; }
+@media (min-width: 1180px) {
+  :root { --kopf-h: 54px; }
+  header h1 { font-size: 23px !important; }
+  .kopf-phase, .kopf-knopf { font-size: 15px; padding: 9px 13px; }
+  .kopf-runde { font-size: 14px; }
+}
+@media (min-width: 1600px) { .kopf-sym .kopf-text { display: inline; } }
+@media (min-width: 1800px) { .kopf-phase .lang { display: inline; } .kopf-phase .kurz { display: none; } }
+@media (max-width: 1299px) { header h1 { display: none; } }
+@media (max-width: 700px) { .kopf-phase { padding: 8px 8px; } .kopf-knopf { padding: 8px 9px; } .kopf-runde { padding: 7px 8px; } }
+/* Hauptbereich: Karte links, Menü rechts (einklappbar) – auf allen Geräten gleich */
+main { grid-template-columns: minmax(0, 1fr) var(--panel-b) !important; grid-template-rows: minmax(0, 1fr) !important; }
+body { height: 100% !important; }
+html { height: 100% !important; }
+#infofeld { border-top: 0 !important; border-left: 1px solid #2b3958 !important; min-height: 0; overflow-y: auto; }
+body.menue-zu main { grid-template-columns: minmax(0, 1fr) !important; }
+/* (Paket 1b: Bei eingeklapptem Menü bleiben nur Aktionsfenster und Feld unten sichtbar, siehe unten) */
+/* Kartenknöpfe als schmale Spalte am linken Rand */
+.zoom { left: 8px !important; top: 50% !important; bottom: auto !important; transform: translateY(-50%) !important; flex-direction: column !important; padding: 5px !important; gap: 5px !important; }
+.zoom .trenner { width: auto !important; height: 1px !important; margin: 2px 0 !important; align-self: stretch; }
+.zoom .knopf, .zoom .knopf.breit { width: 40px !important; height: 40px !important; padding: 0 !important; font-size: 18px !important; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.zoom .knopf svg { width: 18px; height: 18px; }
+.zoom .knopf-mini { font: 600 9.5px/1 var(--display); letter-spacing: .02em; }
+@media (max-height: 380px) {
+  .zoom { padding: 4px !important; gap: 4px !important; }
+  .zoom .knopf, .zoom .knopf.breit { width: 34px !important; height: 34px !important; font-size: 16px !important; }
+  .zoom .knopf-mini { display: none; }
+}
+/* Rohstoffleiste und Infokarte unten mittig */
+.rohleiste { position: absolute; z-index: 4; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100% - 120px);
+  padding: 6px 14px; border-radius: 999px; background: rgba(12,16,28,.84); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid #2b3958;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45); color: #e8ecf4; font: 700 17px/1 var(--display); white-space: nowrap; pointer-events: none; }
+.rohleiste[hidden], .infokarte[hidden] { display: none; }
+.rohleiste .rl-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; color: #c9d2e3; padding-right: 10px; border-right: 1px solid #2b3958; overflow: hidden; text-overflow: ellipsis; }
+.rohleiste .rl-name .farbpunkt { width: 11px; height: 11px; border-width: 1px; }
+.rohleiste .rl-res { display: inline-flex; align-items: center; gap: 5px; }
+.rohleiste .ressymbol { width: 20px; height: 20px; }
+.infokarte { position: absolute; z-index: 4; left: 50%; bottom: 10px; transform: translateX(-50%); width: min(440px, calc(100% - 120px)); box-sizing: border-box;
+  padding: 9px 12px 10px; border-radius: 14px; background: rgba(12,16,28,.92); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid #2b3958;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45); color: #c9d2e3; font: 500 14px/1.35 var(--body); }
+.infokarte .ik-kopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.infokarte h4 { margin: 0; font: 700 17px/1.1 var(--titel); color: #ffe38a; }
+.infokarte .ik-zeile { display: flex; gap: 3px 12px; flex-wrap: wrap; }
+.infokarte b { color: #fff; font-weight: 600; }
+.infokarte .farbpunkt { width: 10px; height: 10px; border-width: 1px; vertical-align: -1px; }
+.infokarte .ressymbol { width: 15px; height: 15px; vertical-align: -3px; }
+/* ===================== Paket 1b (neu): Aktionsfenster über der Karte und Feld unten ===================== */
+header { z-index: 7 !important; }
+#infofeld { z-index: 6 !important; }
+#af-quelle { display: contents; }
+body.menue-zu #infofeld { display: block !important; position: fixed !important; top: 0; left: 0; width: 0 !important; height: 0 !important; min-height: 0 !important;
+  padding: 0 !important; border: 0 !important; overflow: visible !important; box-shadow: none !important; background: none !important; }
+body.menue-zu #infofeld > :not(.af-ueber):not(.af-feldrahmen) { display: none !important; }
+.af-ueber, .af-feldrahmen { position: fixed; top: var(--kopf-h); left: 0; bottom: 0; right: var(--panel-b); box-sizing: border-box; }
+body.menue-zu .af-ueber, body.menue-zu .af-feldrahmen { right: 0; }
+.af-ueber { z-index: 3; display: flex; align-items: center; justify-content: center; padding: 10px;
+  background: rgba(8,12,22,.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.af-fenster { width: min(560px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; color: var(--text);
+  background: linear-gradient(180deg, rgba(24,34,58,.93), rgba(14,20,36,.93)); border: 1px solid #3a4b72; border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06); }
+.af-fenster.neu { animation: afRein .16s ease-out; }
+@keyframes afRein { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .af-fenster.neu { animation: none; } }
+.af-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #2b3958; flex: none; }
+.af-kopf h2 { margin: 0; font: 700 19px/1.15 var(--titel); color: #ffe38a; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-x { flex: none; font: 600 16px/1 var(--display); color: #c9d2e3; border: 1px solid #3a4b72; border-radius: 8px; padding: 7px 11px; background: rgba(255,255,255,.04); cursor: pointer; }
+.af-x:hover { border-color: #ffd34d; color: #fff; }
+.af-koerper { overflow-y: auto; overscroll-behavior: contain; min-height: 0; padding: 10px 14px; display: flex; flex-direction: column; gap: 12px; }
+.af-koerper > .phase, .af-feld .phase { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+.af-koerper > .phase > h3:first-child, .af-koerper > .phase > .schritt:first-child, .af-koerper [data-aktion="phase"] { display: none !important; }
+.af-fuss { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid #2b3958; flex: none; }
+.af-fuss button { font: 700 15px/1 var(--display); padding: 10px 16px; }
+.bau-nein { font-size: 13px; color: var(--leise); }
+.bau-nein summary { cursor: pointer; padding: 4px 2px; list-style-position: inside; }
+.bau-nein .bauliste { margin-top: 6px; }
+/* Regler neben − und + */
+.zeile.mit-regler { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px; }
+.zeile.mit-regler > span:first-child { flex: 1 1 auto; }
+.af-regler { flex: 1 1 100%; min-width: 120px; height: 28px; margin: 0; accent-color: #ffd34d; cursor: pointer; }
+#infofeld button.knopf:has(+ .zahlfeld), #infofeld .zahlfeld + button.knopf { touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* Feld unten (Bewegen, Aufbau, Hinweis beim Bauen): Karte bleibt sichtbar und antippbar */
+.af-feldrahmen { z-index: 2; pointer-events: none; display: flex; align-items: flex-end; justify-content: center; padding: 8px 58px; }
+.af-feldrahmen.klein { padding-bottom: var(--af-unten, 58px); }
+.af-feld { pointer-events: auto; width: min(600px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box;
+  padding: 9px 12px 10px; border-radius: 14px; background: rgba(12,16,28,.94); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border: 1px solid #3a4b72; box-shadow: 0 8px 24px rgba(0,0,0,.55); color: var(--text); font: 500 14px/1.3 var(--body); display: flex; flex-direction: column; gap: 7px; }
+.af-feld.neu { animation: afRein .14s ease-out; }
+.af-fkopf { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.af-titel { flex: 1; min-width: 0; font: 700 16px/1.15 var(--display); color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-titel .pfeil { color: #ffd34d; padding: 0 4px; }
+.af-titel .offen { color: var(--leise); font-weight: 500; font-style: italic; }
+.af-art { flex: none; font: 700 12px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 6px;
+  background: rgba(80,160,255,.15); color: #9fd0ff; border: 1px solid rgba(80,160,255,.4); }
+.af-art.angriff { background: rgba(229,72,77,.18); color: #ff8a8e; border-color: rgba(229,72,77,.45); }
+.af-art.schritt { background: rgba(111,220,140,.14); color: #8fe6a8; border-color: rgba(111,220,140,.4); }
+.af-fkopf .knopf { flex: none; }
+.af-feld .aufstellung { gap: 4px; }
+.af-feld .zugmenge .zeile > span:first-child { display: none; }
+.af-feld .zeile.mit-regler { flex-wrap: nowrap; }
+.af-feld .af-regler { flex: 1 1 auto; min-width: 60px; }
+.af-feld .warnbox { font-size: 13px; padding: 5px 9px; gap: 2px; }
+.af-feld .hinweis { font-size: 12.5px; }
+.af-ffuss { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.af-ffuss .kostenzeile { font-size: 13.5px; min-width: 0; }
+.af-ffuss .haupt { flex: none; margin-left: auto; padding: 9px 14px; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.af-feld.klein { flex-direction: row; flex-wrap: wrap; align-items: center; width: auto; max-width: 100%; padding: 7px 10px; border-radius: 999px; gap: 8px; }
+.af-feld.klein .af-text { font: 600 14px/1.2 var(--display); color: #c9d2e3; padding: 0 4px; }
+.af-feld.klein button { padding: 7px 12px; white-space: nowrap; }
+.af-feld.aufbau { gap: 6px; }
+.af-feld.aufbau .phase { gap: 7px; }
+.af-feld.aufbau .aufgabe { font-size: 18px; }
+.af-feld.aufbau .reihenfolge, .af-feld.aufbau .schnell-liste { display: none; }
+.af-feld.aufbau .gebietskarten { flex-direction: row; flex-wrap: wrap; }
+.af-feld.aufbau .gebietskarte { flex: 1 1 150px; }
+.af-feld.aufbau .aufstellung { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 18px; }
+body.mit-feld #rohleiste, body.mit-feld #infokarte, body.mit-fenster #infokarte { display: none !important; }
+@media (max-height: 430px) {
+  .af-ueber { padding: 6px; }
+  .af-kopf { padding: 6px 12px; }
+  .af-kopf h2 { font-size: 17px; }
+  .af-x { padding: 5px 9px; }
+  .af-koerper { padding: 8px 12px; gap: 9px; }
+  .af-fuss { padding: 6px 12px; }
+  .af-fuss button { padding: 8px 14px; }
+  .af-feldrahmen { padding: 6px 52px; }
+  .af-feld { padding: 7px 10px 8px; gap: 5px; }
+  .af-feld.aufbau .aufgabe { font-size: 16px; }
+}
+/* Hochkant-Hinweis: nur am Handy (kürzere Bildschirmseite unter 600 Pixel) */
+#hochkant { display: none; }
+@media (orientation: portrait) and (max-width: 599px) {
+  #hochkant { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: rgba(8,12,22,.78); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); color: #e8ecf4; text-align: center; padding: 30px; }
+  #hochkant h2 { margin: 0; font: 800 26px/1.15 var(--titel); color: #ffd34d; letter-spacing: .04em; }
+  #hochkant p { margin: 0; font: 500 17px/1.4 var(--body); color: #c9d2e3; max-width: 300px; }
+  #hochkant svg { width: 110px; height: 110px; }
+}
 </style>
 </head>
 <body>
 <header>
   <svg class="emblem" viewBox="-20 -20 40 40" aria-hidden="true"><defs><linearGradient id="emb-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1bf"/><stop offset=".5" stop-color="#ffd34d"/><stop offset="1" stop-color="#b9831c"/></linearGradient></defs><path d="M0-18 15-12V0C15 9 8 15 0 18-8 15-15 9-15 0V-12Z" fill="#14203a" stroke="url(#emb-g)" stroke-width="2"/><path d="M0-12 2.6-2.6 12 0 2.6 2.6 0 12-2.6 2.6-12 0-2.6-2.6Z" fill="url(#emb-g)"/><path d="M0-12 2.6-2.6 0 0ZM12 0 2.6 2.6 0 0ZM0 12-2.6 2.6 0 0ZM-12 0-2.6-2.6 0 0Z" fill="#000" fill-opacity=".28"/><circle r="2" fill="#14203a"/></svg>
   <h1 id="titel">Imperion</h1>
-  <span class="kartenname" id="kartenname"></span>
-  <div class="werkzeuge">
+  <div id="kopf-mitte" class="kopf-mitte"></div>
+  <div class="werkzeuge" id="kopf-werkzeuge">
+    <button class="knopf kopf-sym" id="knopf-mehr" aria-haspopup="true" aria-expanded="false" title="Weitere Knöpfe"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="10" r="1.8"/><circle cx="10" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/></svg><span class="kopf-text">Menü</span></button>
+    <button class="knopf kopf-sym" id="knopf-vollbild" title="Vollbild ein/aus" hidden><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/></svg><span class="kopf-text">Vollbild</span></button>
+    <button class="knopf kopf-sym" id="knopf-menue" aria-pressed="true" title="Menü rechts ein- oder ausklappen"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12.5 3.5v13"/><path class="pfeil" d="M8 8l-2 2 2 2" stroke-linecap="round"/></svg><span class="kopf-text" id="knopf-menue-text">Menü einklappen</span></button>
+  </div>
+  <div id="mehrmenue" class="mehrmenue" hidden>
+    <span class="kartenname" id="kartenname"></span>
     <span class="status-pill" id="kartenstatus">Karte wird geprüft …</span>
     <button class="knopf" id="knopf-regeln">Regeln</button>
     <button class="knopf" id="knopf-protokoll">Protokoll</button>
@@ -734,19 +911,26 @@ dialog[open] { animation: dialog-auf .22s ease-out; }
   <div id="kartenrahmen">
     <svg id="karte" role="img" aria-label="Spielkarte"></svg>
     <div id="tooltip"></div>
+    <div id="rohleiste" class="rohleiste" hidden></div>
+    <div id="infokarte" class="infokarte" hidden></div>
     <div id="computerleiste" class="computerleiste" role="status" hidden><span class="cl-text"></span><span class="cl-knoepfe"><button class="knopf klein" id="cl-tempo" aria-pressed="false">Schneller</button><button class="knopf klein" id="cl-ueberspringen">Zug überspringen</button></span><span class="cl-netz" hidden></span></div>
     <div class="zoom">
       <button class="knopf" id="zoom-rein" aria-label="Hineinzoomen">+</button>
       <button class="knopf" id="zoom-raus" aria-label="Herauszoomen">−</button>
       <button class="knopf" id="zoom-zurueck" aria-label="Ganze Karte zeigen">⤢</button>
       <span class="trenner" aria-hidden="true"></span>
-      <button class="knopf breit an" id="knopf-see" aria-pressed="true" title="Seewege zeigen oder verstecken">Seewege</button>
-      <button class="knopf breit" id="knopf-kont" aria-pressed="false" title="Gebiete nach Kontinent färben (Taste K)">Kontinente</button>
+      <button class="knopf breit an" id="knopf-see" aria-pressed="true" title="Seewege zeigen oder verstecken"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2 7c2-1.6 4-1.6 6 0s4 1.6 6 0 3-1.2 4-.6"/><path d="M2 12c2-1.6 4-1.6 6 0s4 1.6 6 0 3-1.2 4-.6" stroke-dasharray="2.2 2.6"/></svg><span class="knopf-mini">See</span></button>
+      <button class="knopf breit" id="knopf-kont" aria-pressed="false" title="Gebiete nach Kontinent färben (Taste K)"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 5l5-2 3 3 5-1 1 5-3 3 1 4-5 0-3-3-4 1-1-5z"/><path d="M9 6l1 5 4 2" stroke-width="1.2"/></svg><span class="knopf-mini">Kont.</span></button>
       <button class="knopf breit" id="knopf-25d" title="Optik wechseln: Flach → Miniatur → Brett (Taste D)">Flach</button>
     </div>
   </div>
   <aside id="infofeld" aria-live="polite"></aside>
 </main>
+<div id="hochkant" role="alert">
+  <svg viewBox="0 0 100 100" fill="none" stroke="#ffd34d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="34" y="14" width="32" height="56" rx="6" opacity=".45"/><rect x="18" y="40" width="64" height="34" rx="6"/><path d="M74 22c10 6 13 14 12 22"/><path d="M80 40l6 5 4-7"/></svg>
+  <h2>Bitte Handy<br>quer halten</h2>
+  <p>Imperion ist am Handy fürs Querformat gebaut. Dein Spiel läuft weiter – einfach drehen.</p>
+</div>
 
 <dialog id="neuesspiel">
   <h2>Neues Spiel</h2>
@@ -7681,7 +7865,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
     const teile = [];
     if (!spiel) teile.push(startBereich(), legende());
     else {
-      teile.push(spiel.phase === "aufbau" ? phaseBereich() : rundenBereich());
+      teile.push(`<div id="af-quelle">${spiel.phase === "aufbau" ? phaseBereich() : rundenBereich()}</div>`);
       if (auswahl) teile.push(gebietBereich(auswahl));
       teile.push(spielerBereich());
       if (spiel.phase !== "aufbau" && spiel.phase !== "ende") teile.push(punkteBereich());
@@ -7695,6 +7879,8 @@ if (typeof module !== "undefined") module.exports = { Tests };
     aktualisiereUebergabe();
     aktualisiereReserve();
     aktualisiereComputerleiste();
+    afAufbauen();
+    aktualisiereKopf();
     if (!computerTimer) computerPlanen();
   }
 
@@ -7722,7 +7908,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
   const computerName = i => `${esc(spiel.spieler[i].name)} <span class="computer-marke">Computer</span>`;
   /** Ein Dialog oder ein Übergabe-/Geheimfenster ist offen: Der Computer wartet. */
   function computerWartet() {
-    return !!document.querySelector("dialog[open]") || $("#uebergabe").classList.contains("offen") || $("#geheim").classList.contains("offen") || $("#editor").classList.contains("offen");
+    return !!document.querySelector("dialog[open], .af-ueber[data-art='meldung']") || $("#uebergabe").classList.contains("offen") || $("#geheim").classList.contains("offen") || $("#editor").classList.contains("offen");
   }
   function computerPlanen() {
     clearTimeout(computerTimer); computerTimer = null;
@@ -7899,7 +8085,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
     const max = 16;
     const start = Math.max(0, Math.min(pos - 2, folge.length - max));
     const teil = folge.slice(start, start + max);
-    return `<div><h3>${titel}</h3><div class="reihe">${start > 0 ? "… " : ""}${teil.map((j, k) =>
+    return `<div class="reihenfolge"><h3>${titel}</h3><div class="reihe">${start > 0 ? "… " : ""}${teil.map((j, k) =>
       `<span class="farbpunkt ${start + k === pos ? "jetzt" : ""}" style="background:${esc(spiel.spieler[j].farbe)}${start + k < pos ? ";opacity:.35" : ""}" title="${esc(spiel.spieler[j].name)}"></span>`).join("")}${start + max < folge.length ? " …" : ""}</div></div>`;
   }
 
@@ -8213,7 +8399,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
   function zeigeSpielende() {
     const e = ergebnisVon(spiel);
     zeigeMeldung({ klasse: "gold", knopf: "Zur Wertung", titel: e.sieger.length > 1 ? `${e.sieger.map(i => esc(spiel.spieler[i].name)).join(" und ")} teilen sich den Sieg` : `${esc(spiel.spieler[e.sieger[0]].name)} gewinnt!`,
-      html: `<div class="aus-pokal" aria-hidden="true">🏆</div><p>${esc(ergebnisGrund(e))}</p><p class="hinweis">Die ganze Wertung mit allen Zielen steht im Infofeld.</p>` });
+      html: `<div class="aus-pokal" aria-hidden="true">🏆</div><p>${esc(ergebnisGrund(e))}</p><p class="hinweis">Danach siehst du die ganze Wertung mit allen Zielen.</p>` });
   }
   function ausgeschiedenMeldung(i) {
     const p = spiel.spieler[i], info = p.ausgeschiedenInfo || {}, q = info.durch !== undefined ? spiel.spieler[info.durch] : null;
@@ -8539,13 +8725,17 @@ if (typeof module !== "undefined") module.exports = { Tests };
     if (auswahl && s.gebiete[auswahl]?.besitzer === i) {
       const id = auswahl, g = s.gebiete[id];
       const arten = ["bauernhof", "mine", "markt", "depot", "denkmal", "bunker"];
-      const zeilen = arten.map(art => {
+      const geht = [], nein = [];
+      arten.forEach(art => {
         const grund = Runde.bauGrund(s, karte, E, D, i, id, art), { preis, rabatt } = Runde.preis(s, E, D, i, art), auf = Runde.aufschlag(s, E, i, art);
         const aufText = auf?.anzahl ? (art === "denkmal" ? `${auf.anzahl + 1}. Denkmal` : `${auf.anzahl + 1}. ${E.preisAufschlag?.produktionJeArt ? GEB_NAME[art] : "Produktionsgebäude"}`) : "";
-        return `<div class="bauzeile ${grund ? "nein" : ""}"><div><strong>${symbolIcon(art, 16)} ${Runde.GEB_NAME[art]}</strong> <span class="hinweis">${kostenText(preis)}${aufText ? " · " + aufText : ""}${rabatt ? " · " + esc(rabatt) : ""}</span>
+        const z = `<div class="bauzeile ${grund ? "nein" : ""}"><div><strong>${symbolIcon(art, 16)} ${Runde.GEB_NAME[art]}</strong> <span class="hinweis">${kostenText(preis)}${aufText ? " · " + aufText : ""}${rabatt ? " · " + esc(rabatt) : ""}</span>
           ${grund ? `<div class="grund">${esc(grund)}</div>` : ""}</div>
           <button class="knopf klein" data-bauen="${art}" ${grund ? "disabled" : ""}>Bauen</button></div>`;
-      }).join("");
+        (grund ? nein : geht).push({ art, zeile: z });
+      });
+      const zeilen = geht.map(x => x.zeile).join("") + (nein.length ? `<details class="bau-nein" ${ui.bauNeinOffen ? "open" : ""}><summary>Hier nicht möglich: ${nein.map(x => esc(Runde.GEB_NAME[x.art])).join(", ")} <span class="hinweis">(antippen zeigt den Grund)</span></summary>
+        <div class="bauliste">${nein.map(x => x.zeile).join("")}</div></details>` : "");
       const rg = Runde.rekrutierGrund(s, karte, E, i, id);
       const maxE = Math.max(1, p.ressourcen.eisen + (Runde.truppenPreis(s, D, i, 1).rabatt ? 1 : 0));
       if (ui.eisen > maxE) ui.eisen = maxE;
@@ -8555,7 +8745,8 @@ if (typeof module !== "undefined") module.exports = { Tests };
         `<div class="aufstellung"><div class="zeile"><span>${rn} Truppen für ${tp.eisen} Eisen${tp.rabatt ? ` <span class="hinweis">(${esc(tp.rabatt)})</span>` : ""}</span>${stepper(rn, "eisen", ui.eisen > 1, ui.eisen < maxE, "Truppen", { min: tpe, max: maxE * tpe, schritt: tpe })}</div></div>
          <button class="${rekGold ? "haupt" : "knopf"}" data-aktion="rekrutieren" ${tp.eisen > p.ressourcen.eisen ? "disabled" : ""}>${tp.eisen > p.ressourcen.eisen ? `Zu wenig Eisen (${p.ressourcen.eisen} vorhanden)` : `${truppenText(rn)} in ${esc(gname(id))} rekrutieren`}</button>`;
       gebiet = `<div class="abschnitt"><h3>${esc(gname(id))}${g.gebaeude ? ` · ${esc(Runde.GEB_NAME[g.gebaeude])}` : ""}${g.bunker ? " · Bunker" : ""}</h3>
-        <div class="bauliste">${zeilen}</div><h3 style="margin-top:6px">Rekrutieren (1 Eisen = ${E.rekrutieren.truppenProEisen} Truppen)</h3>${rek}</div>`;
+        <h3>Rekrutieren (1 Eisen = ${E.rekrutieren.truppenProEisen} Truppen)</h3>${rek}
+        <h3 style="margin-top:6px">Bauen</h3><div class="bauliste">${zeilen}</div></div>`;
     } else gebiet = `<p class="hinweis">Tippe auf der Karte ein eigenes Gebiet an. Dann siehst du, was du dort bauen und ob du dort rekrutieren kannst. Rekrutieren geht in deiner Hauptstadt${E.eroberteHauptstadt?.rekrutierungsort ? ", in eroberten Hauptstädten" : ""}, in Depots und in versorgten Produktionsgebäuden (gelb gestrichelt).</p>`;
     const sold = w.truppenInHauptstadt ? `<div class="abschnitt"><h3>Söldner</h3><p class="hinweis">Einmal: ${kostenText(w.kosten)} für ${w.truppenInHauptstadt} Truppen in deiner Hauptstadt.</p>
       <button class="knopf" data-aktion="soeldner" ${s.rundeInfo.genutzt[i].soeldner || RES.some(r => p.ressourcen[r] < (w.kosten[r] || 0)) ? "disabled" : ""}>${s.rundeInfo.genutzt[i].soeldner ? "Schon angeworben" : "Söldner anwerben"}</button></div>` : "";
@@ -9125,7 +9316,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
     const warBrett = svg.classList.contains("brett");
     svg.classList.toggle("d25", optik === "miniatur");
     svg.classList.toggle("brett", optik === "brett");
-    const b = $("#knopf-25d"); b.textContent = OPTIK_NAME[optik]; b.classList.toggle("an", optik !== "flach");
+    const b = $("#knopf-25d"); b.innerHTML = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4-7 4-7-4z"/><path d="M3 11l7 4 7-4"/></svg><span class="knopf-mini">${OPTIK_NAME[optik]}</span>`; b.setAttribute("aria-label", "Optik: " + OPTIK_NAME[optik]); b.classList.toggle("an", optik !== "flach");
     if (warBrett !== (optik === "brett") && karte) {   // Rand um die Karte ändert sich
       const B = roh.bild?.breite || 1000, H = roh.bild?.hoehe || 700, rr = rahmenRand(B);
       voll = { x: -rr, y: -rr, w: B + 2 * rr, h: H + 2 * rr }; vb = { ...voll }; setzeViewBox();
@@ -9640,7 +9831,367 @@ if (typeof module !== "undefined") module.exports = { Tests };
 
   // ---------- Paket 8: Web-App (Offline, Installation, Version) ----------
   // Nur außerhalb von Claude: Manifest und Service Worker liegen als eigene Dateien neben der Seite.
-  const VERSION = "6c · 26.11.2026";
+
+  // ===================== Paket 1a (neu): Grundgerüst des Bildschirms =====================
+  // Kopfleiste (Runde, Phasen, Zug beenden), Menü „⋯“, Vollbild, rechtes Menü einklappbar, Rohstoffleiste bzw.
+  // Infokarte unten auf der Karte. Reine Oberfläche: Die Knöpfe oben lösen dieselben Klicks aus wie die im Menü rechts.
+  /** Paket 1b: Zustand von Aktionsfenster und Feld unten (reine Oberfläche, nicht im Spielstand). */
+  const af = { zu: null, letzter: null, scroll: 0, meldung: null, geschlossen: null, gastRunde: null };
+  const LAYOUT = "spieletest1.layout";
+  const istHandy = () => Math.min(screen.width || innerWidth, screen.height || innerHeight) < 600;
+  let menueZu = false, rohSpieler = null, infoZu = null;
+  /** Rechtes Menü ein- oder ausklappen (ohne Angabe umschalten); jedes Gerät merkt sich die Wahl. */
+  function menueSetzen(zu, merken = true) {
+    menueZu = zu === undefined ? !menueZu : !!zu;
+    document.body.classList.toggle("menue-zu", menueZu);
+    const b = $("#knopf-menue"); b.setAttribute("aria-pressed", String(!menueZu));
+    $("#knopf-menue-text").textContent = menueZu ? "Menü zeigen" : "Menü einklappen";
+    if (merken) try { localStorage.setItem(LAYOUT, JSON.stringify({ menueZu })); } catch (e) { /* ohne Speicher geht es auch */ }
+    if (typeof spiel !== "undefined") aktualisiereKopf();
+  }
+  try { const l = JSON.parse(localStorage.getItem(LAYOUT) || "null"); menueSetzen(l && "menueZu" in l ? l.menueZu : istHandy(), false); }
+  catch (e) { menueSetzen(istHandy(), false); }
+  $("#knopf-menue").onclick = () => menueSetzen();
+  /** Menü „⋯“: am PC stehen die wichtigsten Knöpfe direkt oben, am Handy alle im Menü. */
+  const KOPF_HAUPT = ["#knopf-regeln", "#knopf-protokoll", "#knopf-spielstand", "#knopf-spielleiter", "#knopf-neu"];
+  let kopfBreit = null;
+  function ordneKopf() {
+    const breit = innerWidth >= 1180;
+    if (breit === kopfBreit) return;
+    kopfBreit = breit;
+    const w = $("#kopf-werkzeuge"), m = $("#mehrmenue"), mehr = $("#knopf-mehr");
+    for (const sel of KOPF_HAUPT) { const k = $(sel); if (breit) w.insertBefore(k, mehr); else m.insertBefore(k, $("#knopf-editor")); }
+  }
+  ordneKopf();
+  addEventListener("resize", ordneKopf);
+  function mehrmenue(auf) {
+    const m = $("#mehrmenue"); auf = auf === undefined ? m.hidden : auf;
+    m.hidden = !auf; $("#knopf-mehr").setAttribute("aria-expanded", String(auf));
+  }
+  $("#knopf-mehr").onclick = e => { e.stopPropagation(); mehrmenue(); };
+  $("#mehrmenue").addEventListener("click", e => { if (e.target.closest("button")) setTimeout(() => mehrmenue(false), 0); });
+  document.addEventListener("click", e => { if (!$("#mehrmenue").hidden && !e.target.closest("#mehrmenue")) mehrmenue(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") mehrmenue(false); });
+  /** Vollbild (blendet die Leisten des Browsers aus); am Handy wird dabei das Querformat festgehalten, wo der Browser es erlaubt. */
+  const vollbildMoeglich = !!(document.fullscreenEnabled && document.documentElement.requestFullscreen);
+  $("#knopf-vollbild").hidden = !vollbildMoeglich;
+  $("#knopf-vollbild").onclick = async () => {
+    try {
+      if (document.fullscreenElement) { await document.exitFullscreen(); return; }
+      await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+      if (istHandy() && screen.orientation?.lock) screen.orientation.lock("landscape").catch(() => {});
+    } catch (e) { /* der Browser erlaubt es hier nicht */ }
+  };
+  document.addEventListener("fullscreenchange", () => $("#knopf-vollbild").classList.toggle("an", !!document.fullscreenElement));
+
+  /** Einen Knopf aus dem Menü rechts auslösen (auch wenn das Menü eingeklappt ist). */
+  const menueKnopf = sel => { const b = $("#infofeld " + sel); if (b && !b.disabled) { b.click(); return true; } return false; };
+  /** Mit einem Phasen-Knopf oben auch über mehrere Phasen springen (jeder Schritt mit der üblichen Warnung). */
+  function zuPhase(ziel) {
+    const s = spiel; if (!s || s.phase !== "zug") return;
+    if (Runde.PHASEN.indexOf(s.zug.phase) >= Runde.PHASEN.indexOf(ziel)) return;
+    const vorher = s.zug.phase;
+    if (!menueKnopf('[data-aktion="phase"]')) return;
+    setTimeout(() => { if (spiel?.phase === "zug" && spiel.zug.phase !== vorher && !document.querySelector("dialog[open]")) zuPhase(ziel); }, 0);
+  }
+  const SPIEGEL = ["runde", "kampf-wahl", "schnell-los", "uebergabe-karten", "uebergabe-truppen"];
+  function aktualisiereKopf() {
+    const m = $("#kopf-mitte"); if (!m) return;
+    let html = "";
+    const s = spiel;
+    if (s) {
+      const mw = Spielstand.modusWerte(s, E);
+      const rundeTxt = s.phase === "aufbau" ? "Aufbau" : s.runde ? `Runde ${s.runde}${mw.endlos ? "" : ` / ${s.runde + s.stapel.szenario.length}`}` : "Start";
+      html += `<span class="kopf-runde">${rundeTxt}</span>`;
+      const i = amZug();
+      const eigen = i !== null && i !== undefined && hier(i);
+      if (s.phase === "zug" && !s.kampf) {
+        const ph = s.zug.phase, k0 = Runde.PHASEN.indexOf(ph);
+        if (!eigen) html += `<span class="kopf-status"><span class="farbpunkt" style="background:${esc(s.spieler[i].farbe)}"></span>${esc(s.spieler[i].name)} ist dran · ${esc(Runde.PHASE_NAME[ph].split(" ")[0])}</span>`;
+        else {
+          html += `<div class="kopf-phasen">${Runde.PHASEN.map((x, k) => {
+            const name = Runde.PHASE_NAME[x], kl = k === k0 ? "an" : k < k0 ? "fertig" : "";
+            return `<button class="kopf-phase ${kl}" data-kopf-phase="${x}" ${k < k0 ? "disabled" : ""} title="${k > k0 ? `Weiter zu ${esc(name)}` : k === k0 ? `${esc(name)}: Fenster öffnen` : esc(name)}">${k + 1} <span class="kurz">${esc(name.split(" ")[0])}</span><span class="lang">${esc(name)}</span></button>`;
+          }).join("")}</div>${netz.rolle === "gast" ? "" : `<button class="kopf-knopf kopf-undo" data-kopf="undo" ${verlauf.length ? "" : "disabled"} title="Rückgängig (Strg+Z)" aria-label="Rückgängig">↶</button>`}<button class="kopf-knopf" data-kopf="zugende">Zug beenden</button>`;
+        }
+      } else {
+        let status = "";
+        if (s.phase === "ende") status = "Spielende";
+        else if (s.kampf) status = `Kampf um ${esc(gname(s.kampf.nach))}`;
+        else if (s.phase === "rundenbeginn") status = "Rundenbeginn";
+        else if (s.phase === "aufbau") status = "Spielaufbau";
+        if (i !== null && i !== undefined && s.spieler[i] && s.phase !== "ende") status += `${status ? " · " : ""}<span class="farbpunkt" style="background:${esc(s.spieler[i].farbe)}"></span>${esc(s.spieler[i].name)}${eigen ? "" : " ist dran"}`;
+        if (status) html += `<span class="kopf-status">${status}</span>`;
+        const sp = SPIEGEL.map(a => $(`#infofeld button.haupt[data-aktion="${a}"]`)).find(b => b && !b.disabled);
+        if (sp) html += `<button class="kopf-knopf gold" data-kopf-spiegel="${esc(sp.dataset.aktion)}">${esc(sp.textContent.trim())}</button>`;
+        else if (af.geschlossen) html += `<button class="kopf-knopf gold" data-kopf="fenster">${esc(af.geschlossen)} ›</button>`;
+        else if (menueZu && eigen && s.phase !== "ende" && !af.letzter) html += `<button class="kopf-knopf gold" data-kopf="menue">Im Menü entscheiden ›</button>`;
+      }
+    }
+    if (m.innerHTML !== html) m.innerHTML = html;
+    aktualisiereRohleiste();
+    afUnten();
+  }
+  $("#kopf-mitte").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b || b.disabled) return;
+    if (b.dataset.kopfPhase) { if (b.classList.contains("an")) afOeffnen(); else zuPhase(b.dataset.kopfPhase); }
+    else if (b.dataset.kopf === "undo") menueKnopf('[data-aktion="rueckgaengig"]');
+    else if (b.dataset.kopf === "fenster") afOeffnen();
+    else if (b.dataset.kopf === "zugende") menueKnopf('[data-aktion="zugende"]');
+    else if (b.dataset.kopf === "menue") menueSetzen(false);
+    else if (b.dataset.kopfSpiegel) menueKnopf(`button[data-aktion="${b.dataset.kopfSpiegel}"]`);
+  });
+  /** Unten auf der Karte: die Rohstoffe (lokal des Spielers am Zug, online immer die eigenen) bzw. bei eingeklapptem
+      Menü die Infokarte des angetippten Gebiets. */
+  function aktualisiereRohleiste() {
+    const rl = $("#rohleiste"), ik = $("#infokarte"); if (!rl) return;
+    const s = spiel;
+    const zeigeInfo = !!(s && menueZu && auswahl && karte?.gebiete.get(auswahl) && infoZu !== auswahl);
+    if (zeigeInfo) {
+      const g = karte.gebiete.get(auswahl), st = s.gebiete[auswahl], kt = karte.kontinente.get(g.kontinent), res = karte.ressourcen.get(g.ressource);
+      const b = st.besitzer !== null && st.besitzer !== undefined ? s.spieler[st.besitzer] : null;
+      const geb = [st.gebaeude ? esc(GEB_NAME[st.gebaeude] || st.gebaeude) : "", st.bunker ? `Bunker (${st.schutzpunkte})` : ""].filter(Boolean).join(" + ");
+      const tr = b ? sichtbareTruppen(auswahl) : 0;
+      const html = `<div class="ik-kopf"><h4>${esc(g.name)}</h4><button class="knopf klein" data-ik-zu>✕</button></div>
+        <div class="ik-zeile"><span>${b ? `<span class="farbpunkt" style="background:${esc(b.farbe)}"></span> <b>${esc(b.name)}</b>` : "<b>neutral</b>"}</span>
+        <span>Truppen <b>${tr === "?" ? "verdeckt" : tr}</b></span><span>${symbolSvg(g.ressource, 15)} <b>${esc(res?.name || g.ressource)}</b></span>
+        <span>Kontinent <b>${esc(kt.name)}</b> (+${kt.bonus})</span>${geb ? `<span>Gebäude <b>${geb}</b></span>` : ""}</div>`;
+      if (ik.innerHTML !== html) ik.innerHTML = html;
+      ik.hidden = false; rl.hidden = true; return;
+    }
+    ik.hidden = true;
+    if (!s || s.phase === "aufbau") { rl.hidden = true; return; }
+    let i = netz.rolle === "gast" ? netz.platz : amZug();
+    if (i === null || i === undefined || !s.spieler[i]) i = rohSpieler;
+    if (i === null || i === undefined || !s.spieler[i]) { rl.hidden = true; return; }
+    rohSpieler = i;
+    const p = s.spieler[i], r = p.ressourcen || {};
+    const html = `<span class="rl-name"><span class="farbpunkt" style="background:${esc(p.farbe)}"></span>${esc(p.name)}</span>` +
+      RES.map(k => `<span class="rl-res" title="${RES_NAME[k]}">${symbolSvg(k, 20)}${r[k] ?? 0}</span>`).join("");
+    if (rl.innerHTML !== html) rl.innerHTML = html;
+    rl.hidden = false;
+  }
+  $("#infokarte").addEventListener("click", e => { if (e.target.closest("[data-ik-zu]")) { infoZu = auswahl; aktualisiereRohleiste(); } });
+
+  // ===================== Paket 1b (neu): Aktionsfenster über der Karte und Feld unten =====================
+  // Alles, was man bestätigen muss, steht in einem Fenster über der Karte (leicht durchsichtig, Karte dahinter leicht
+  // unscharf, immer mit ✕). Was man auf der Karte antippt (Ziehen, Angreifen, Schritt, Aufbau), steht im Feld unten;
+  // die Karte bleibt dabei antippbar. Fenster und Feld liegen im Infofeld, damit alle Klicks wie bisher wirken; sie
+  // nehmen die Knoten des Handlungsbereichs (#af-quelle) auf. Reine Oberfläche: keine Spielregel ändert sich.
+  const afKurz = ph => Runde.PHASE_NAME[ph].split(" ")[0];
+  /** Was gerade über bzw. auf der Karte erscheint: { fenster, key, titel, label, fuss } oder { feld } oder null. */
+  function afModus() {
+    const s = spiel;
+    if (!s || spielleiter) return null;
+    if (s.phase === "aufbau") return { feld: "aufbau" };
+    if (s.kampf) {
+      const k = s.kampf;
+      if (!hier(k.angreifer) && !hier(k.verteidiger)) return null;
+      return { fenster: "kampf", key: `k:${zugKennung(s)}:${(s.zug.kaempfe || []).length}:${k.nach}`, titel: `Kampf um ${gname(k.nach)}`, label: "Kampf" };
+    }
+    if (s.phase === "bereit" || s.phase === "rundenende" || s.phase === "ende")
+      return { fenster: "runde", key: `r:${s.phase}:${s.runde}`, alle: true, label: s.phase === "ende" ? "Wertung" : "Runde", titel: s.phase === "ende" ? "Spielende" : "" };
+    if (s.phase === "rundenbeginn") {
+      const o = s.offen[0]; if (!o || !hier(o.spieler)) return null;
+      return { fenster: "rundenbeginn", key: `rb:${s.runde}:${o.art}:${o.spieler}`, alle: true, label: o.art === "revolution" ? "Revolution" : "Kontinentbonus",
+        titel: `Runde ${s.runde} · ${o.art === "revolution" ? "Revolution" : "Kontinentbonus"}` };
+    }
+    if (s.phase !== "zug") return null;
+    if (netz.rolle === "gast" && af.gastRunde !== s.runde) { af.gastRunde = s.runde; af.meldung = s.runde; }   // Gast: Rundenbeginn auch zeigen
+    if (af.meldung === s.runde) return { fenster: "meldung", key: `m:${s.runde}`, titel: `Runde ${s.runde} beginnt`, label: "Runde" };
+    const i = s.zug.spieler, ph = s.zug.phase;
+    if (!hier(i)) return null;
+    if (ph === "handeln") return { fenster: "handeln", key: `h:${zugKennung(s)}`, titel: `1 · ${Runde.PHASE_NAME.handeln}`, label: "Handeln", fuss: true };
+    if (ph === "bauen") {
+      if (auswahl && s.gebiete[auswahl]?.besitzer === i) return { fenster: "bauen", key: `b:${zugKennung(s)}:${auswahl}`, titel: `2 · Bauen – ${gname(auswahl)}`, label: "Bauen", fuss: true };
+      return { feld: "bauhinweis" };
+    }
+    if (ph === "bewegen" && ui.zug.von) return { feld: "bewegen" };
+    return null;
+  }
+  /** Nach jedem Zeichnen des Infofelds: Fenster bzw. Feld neu aufbauen. */
+  function afAufbauen() {
+    const inf = $("#infofeld"), q = $("#af-quelle"), body = document.body;
+    body.classList.remove("mit-fenster", "mit-feld", "mit-feld-klein");
+    af.geschlossen = null;
+    const m = q ? afModus() : null;
+    if (!m) { af.letzter = null; return; }
+    if (m.fenster) {
+      if (af.zu === m.key) { af.geschlossen = m.label || "Fenster"; af.letzter = null; return; }
+      const knoten = m.fenster === "meldung" ? [] : m.alle ? [...q.children] : [q.children[1]].filter(Boolean);
+      let titel = m.titel;
+      if (!titel) titel = knoten[0]?.querySelector(".schritt")?.textContent.trim() || m.label;
+      const neu = af.letzter !== m.key;
+      let fuss = "";
+      if (m.fuss) {
+        const nach = Runde.PHASEN[Runde.PHASEN.indexOf(spiel.zug.phase) + 1];
+        fuss = `<div class="af-fuss"><button class="knopf" data-af-fertig>Fertig</button>${nach ? `<button class="haupt" data-aktion="phase">Weiter zu ${esc(afKurz(nach))} ›</button>` : ""}</div>`;
+      } else if (m.fenster === "meldung") fuss = `<div class="af-fuss"><button class="haupt" data-af-ok>Weiter</button></div>`;
+      const u = document.createElement("div");
+      u.className = "af-ueber"; u.dataset.art = m.fenster;
+      u.innerHTML = `<div class="af-fenster${neu ? " neu" : ""}" role="dialog" aria-label="${esc(titel)}"><div class="af-kopf"><h2>${esc(titel)}</h2>
+        <button class="af-x" data-af-zu aria-label="Schließen" title="Schließen (Esc)">✕</button></div><div class="af-koerper"></div>${fuss}</div>`;
+      const k = u.querySelector(".af-koerper");
+      if (m.fenster === "meldung") k.innerHTML = szenarioKarte() + einkommenTabelle();
+      knoten.forEach(n => k.appendChild(n));
+      afRegler(k);
+      inf.appendChild(u);
+      // Läuft gerade ein Computer, bleibt seine Leiste (Schneller, Zug überspringen) oben frei bedienbar.
+      const cl = $(".computerleiste");
+      if (cl && !cl.hidden && cl.offsetHeight) u.style.top = Math.round(cl.getBoundingClientRect().bottom + 4) + "px";
+      if (!neu) k.scrollTop = af.scroll; else af.scroll = 0;
+      k.addEventListener("scroll", () => { af.scroll = k.scrollTop; }, { passive: true });
+      if (m.fenster === "rundenbeginn") af.meldung = null;
+      af.letzter = m.key;
+      body.classList.add("mit-fenster");
+      return;
+    }
+    // Feld unten
+    const key = "feld:" + m.feld, neu = af.letzter !== key;
+    const rahmen = document.createElement("div"), f = document.createElement("div");
+    rahmen.className = "af-feldrahmen"; f.className = "af-feld" + (neu ? " neu" : "");
+    rahmen.appendChild(f);
+    if (m.feld === "aufbau") {
+      f.classList.add("aufbau");
+      [...q.children].forEach(n => f.appendChild(n));
+    } else if (m.feld === "bauhinweis") {
+      const s = spiel, i = s.zug.spieler, p = s.spieler[i];
+      const hs = p.hauptstadt && s.gebiete[p.hauptstadt]?.besitzer === i ? p.hauptstadt : null;
+      const sold = q.querySelector('[data-aktion="soeldner"]:not(:disabled)');
+      rahmen.classList.add("klein"); f.classList.add("klein");
+      f.innerHTML = `<span class="af-text">Tippe ein Gebiet zum Bauen an</span>${hs ? `<button class="knopf" data-af-geh="${esc(hs)}">${symbolIcon("hauptstadt", 14)} Hauptstadt</button>` : ""}${sold ? sold.outerHTML : ""}
+        <button class="haupt" data-aktion="phase">Weiter zu ${esc(afKurz("bewegen"))} ›</button>`;
+      body.classList.add("mit-feld-klein");
+    } else {
+      afBewegenFeld(f, q.children[1]);
+    }
+    afRegler(f);
+    inf.appendChild(rahmen);
+    if (!neu) f.scrollTop = af.scroll; else af.scroll = 0;
+    f.addEventListener("scroll", () => { af.scroll = f.scrollTop; }, { passive: true });
+    af.letzter = key;
+    if (m.feld !== "bauhinweis") body.classList.add("mit-feld");
+  }
+  /** Feld unten fürs Bewegen: Art, Weg, Truppenzahl (− Zahl + Regler Alle), Kosten, Warnungen, Ausführen, Abbrechen. */
+  function afBewegenFeld(f, q) {
+    const s = spiel, z = ui.zug;
+    const haupt = q?.querySelector('button.haupt[data-aktion="ziehen"], button.haupt[data-aktion="schritt"], button.haupt[data-aktion="angriff"]');
+    const art = haupt?.dataset.aktion || (z.nach ? (s.gebiete[z.nach].besitzer === null || s.gebiete[z.nach].besitzer === undefined ? "schritt" : s.gebiete[z.nach].besitzer === s.zug.spieler ? "ziehen" : "angriff") : null);
+    const artName = { ziehen: "Ziehen", schritt: "Besetzen", angriff: "Angriff" }[art];
+    const titel = `${esc(gname(z.von))} <span class="hinweis">(${s.gebiete[z.von].truppen})</span><span class="pfeil">→</span>${z.nach ? esc(gname(z.nach)) : `<span class="offen">Ziel antippen</span>`}`;
+    f.innerHTML = `<div class="af-fkopf">${artName ? `<span class="af-art ${art}">${artName}</span>` : ""}<span class="af-titel">${titel}</span>
+      <button class="knopf klein" data-aktion="zug-leeren">Abbrechen</button></div>`;
+    if (!q) return;
+    const abg = q.querySelector("p.hinweis.abg");
+    if (!z.nach && !abg) {
+      f.insertAdjacentHTML("beforeend", `<p class="hinweis">Ziel antippen: eigenes Gebiet (kostenlos), neutrales Nachbargebiet (Schritt) oder feindliches Nachbargebiet (Angriff).</p>`);
+      return;
+    }
+    const menge = q.querySelector(".zugmenge"), kosten = q.querySelector(".kostenzeile");
+    let vert = art === "angriff" && haupt ? haupt.previousElementSibling : null;
+    if (vert && !vert.matches("p.hinweis")) vert = null;
+    if (menge) f.appendChild(menge);
+    if (vert) f.appendChild(vert);
+    q.querySelectorAll(".warnbox").forEach(w => f.appendChild(w));
+    if (abg) f.appendChild(abg);
+    if (kosten || haupt) {
+      const fu = document.createElement("div"); fu.className = "af-ffuss";
+      if (kosten) fu.appendChild(kosten);
+      if (haupt) fu.appendChild(haupt);
+      f.appendChild(fu);
+    }
+  }
+  /** Regler neben dem Zahlenfeld für die Truppenzahl beim Ziehen und Rekrutieren. */
+  function afRegler(wurzel) {
+    wurzel.querySelectorAll('.zahlfeld[data-feld="zt"], .zahlfeld[data-feld="eisen"]').forEach(inp => {
+      const min = +inp.dataset.min, max = +inp.dataset.max, st = +inp.dataset.schritt || 1, zeile = inp.closest(".zeile");
+      if (!zeile || (max - min) / st < 3) return;
+      const r = document.createElement("input");
+      r.type = "range"; r.className = "af-regler"; r.min = min; r.max = max; r.step = st; r.value = inp.value; r.dataset.feld = inp.dataset.feld;
+      r.setAttribute("aria-label", (inp.getAttribute("aria-label") || "Anzahl") + " (Regler)");
+      zeile.classList.add("mit-regler");
+      const alle = zeile.querySelector("[data-ztset]");
+      zeile.insertBefore(r, alle || null);
+    });
+  }
+  /** Fenster schließen: ✕/Esc verwirft nur nicht ausgeführte Einstellungen, „Fertig“ behält sie. */
+  function afSchliessen(verwerfen) {
+    const m = afModus(); if (!m?.fenster || af.zu === m.key) return;
+    if (m.fenster === "meldung") { af.meldung = null; render(); return; }
+    if (verwerfen) {
+      if (m.fenster === "handeln") { ui.bank.anzahl = 1; ui.bankGewaehlt = false; ui.handel.gibt = { nahrung: 0, eisen: 0, gold: 0 }; ui.handel.bekommt = { nahrung: 0, eisen: 0, gold: 0 }; }
+      if (m.fenster === "bauen") { ui.eisen = 1; ui.eisenGewaehlt = false; }
+      if (m.fenster === "rundenbeginn") { ui.bonus = null; ui.revolution = null; }
+    }
+    if (m.fenster === "bauen") auswahl = null; else af.zu = m.key;
+    render();
+  }
+  function afOeffnen() { af.zu = null; render(); }
+  /** Abstand des kleinen Felds über der Rohstoffleiste bzw. Infokarte. */
+  function afUnten() {
+    const el = [$("#rohleiste"), $("#infokarte")].find(x => x && !x.hidden && x.offsetHeight);
+    document.documentElement.style.setProperty("--af-unten", el ? (el.offsetHeight + 18) + "px" : "8px");
+  }
+  // Klicks in Fenster und Feld (vor den übrigen Klicks des Infofelds, damit „Runde beginnen“ die Meldung vormerkt)
+  $("#infofeld").addEventListener("click", e => {
+    const sm = e.target.closest("summary");
+    if (sm?.parentElement?.matches(".bau-nein")) { ui.bauNeinOffen = !sm.parentElement.open; return; }
+    if (e.target.classList?.contains("af-ueber")) {   // neben das Fenster getippt: Handeln und Bauen schließen wie „Fertig“
+      const m = afModus(); if (m?.fuss) afSchliessen(false);
+      return;
+    }
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.hasAttribute("data-af-zu")) { e.stopPropagation(); afSchliessen(true); }
+    else if (b.hasAttribute("data-af-fertig")) { e.stopPropagation(); afSchliessen(false); }
+    else if (b.hasAttribute("data-af-ok")) { e.stopPropagation(); af.meldung = null; render(); }
+    else if (b.dataset.afGeh) { e.stopPropagation(); waehle(b.dataset.afGeh); }
+    else if (b.dataset.aktion === "runde" && spiel && !b.disabled) af.meldung = (spiel.phase === "bereit" ? 0 : spiel.runde) + 1;
+  }, true);
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || !$(".af-ueber") || computerWartet()) return;
+    e.preventDefault(); afSchliessen(true);
+  });
+  // Regler: beim Schieben Zahl mitführen, beim Loslassen neu zeichnen
+  $("#infofeld").addEventListener("input", e => {
+    const r = e.target.closest?.(".af-regler"); if (!r) return;
+    const n = +r.value; feldSetzen(r.dataset.feld, n);
+    const inp = r.closest(".zeile")?.querySelector(".zahlfeld"); if (inp) inp.value = n;
+  });
+  $("#infofeld").addEventListener("change", e => { if (e.target.closest?.(".af-regler")) render(); });
+  $("#infofeld").addEventListener("keydown", e => { if (e.target.closest?.(".af-regler")) e.stopPropagation(); });
+  // − und + gedrückt halten: zählt immer schneller weiter
+  const zaehlKnopf = b => b?.matches?.("button.knopf") && !b.disabled && /^[−+-]$/.test(b.textContent.trim());
+  const knopfWahl = b => "#infofeld button" + [...b.attributes].filter(a => a.name.startsWith("data-")).map(a => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
+  let halten = null, klickSperre = 0;
+  function haltenEnde() {
+    if (!halten) return;
+    clearTimeout(halten.t);
+    if (halten.n) klickSperre = Date.now();
+    halten = null;
+  }
+  $("#infofeld").addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    const b = e.target.closest("button"); if (!zaehlKnopf(b)) return;
+    haltenEnde();
+    const h = halten = { wahl: knopfWahl(b), n: 0, t: 0 };
+    const tick = () => {
+      if (halten !== h) return;
+      const k = document.querySelector(h.wahl);
+      if (!zaehlKnopf(k)) { haltenEnde(); return; }
+      h.n++; k.click();
+      h.t = setTimeout(tick, Math.max(35, 170 - h.n * 14));
+    };
+    h.t = setTimeout(tick, 420);
+  });
+  for (const ev of ["pointerup", "pointercancel"]) addEventListener(ev, haltenEnde, true);
+  addEventListener("blur", haltenEnde);
+  // Nach dem Halten den Klick des Loslassens nicht noch einmal zählen
+  $("#infofeld").addEventListener("click", e => {
+    if (klickSperre && Date.now() - klickSperre < 500 && e.isTrusted) { klickSperre = 0; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  $("#infofeld").addEventListener("contextmenu", e => { if (zaehlKnopf(e.target.closest("button"))) e.preventDefault(); });
+
+  const VERSION = "1b · 27.11.2026";
   let installHinweis = null;
   const alsApp = () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   function appStatus() {
