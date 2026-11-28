@@ -4296,6 +4296,12 @@ const Kampf = (() => {
       .map(id => ({ id, max: Math.min(maxTruppen, seite === "a" ? maxAngreifer(s, E, id) : Bewegung.beweglich(s, E, id)) }))
       .filter(q => q.max >= 1);
   }
+  /** Paket 3d.1: Wer hat abgefangen – Bunker (mit Schutzpunkten) oder Feldschanze (ohne Bunker)? */
+  function abfangText(g, n, kurz = false) {
+    if (!g.bunker) return `die Feldschanze fängt ${n} ab`;
+    return kurz ? `der Bunker fängt ${n} ab` : `der Bunker fängt ${n} ab (${g.schutzpunkte} ${g.schutzpunkte === 1 ? "Schutzpunkt" : "Schutzpunkte"} übrig)`;
+  }
+  const g0 = s => s.gebiete[s.kampf.nach];
   /** Paket 3d (neu), Nachschubkolonne: angrenzende eigene, versorgte Gebiete mit mindestens 2 Truppen, die 1 Truppe abgeben
       können (die meisten Truppen zuerst), höchstens w.kolonne Stück. */
   function kolonnenQuellen(s, karte, E, seite, w) {
@@ -4552,7 +4558,7 @@ const Kampf = (() => {
     // Aufschlüsselung für die Anzeige: Grundverluste aus der gegnerischen Stärke, Karten, Szenario, Bunker, tatsächlich gefallen
     rd.verlustA = { grund: vD, karten: erlA - e1 - vD, szenario: e1, abgefangen: 0, gefallen: rA.tot };
     rd.verlustD = { grund: vA, karten: erlD - e1 - vA, szenario: e1, abgefangen: rD.abgefangen, gefallen: rD.tot };
-    melde(s, `Verluste: ${A} verliert ${tr(rA.tot)} (${k.truppenA} übrig), ${V} verliert ${tr(rD.tot)}${rD.abgefangen ? `, der Bunker fängt ${rD.abgefangen} ab (${g.schutzpunkte} Schutzpunkte übrig)` : ""} (${g.truppen} übrig).`);
+    melde(s, `Verluste: ${A} verliert ${tr(rA.tot)} (${k.truppenA} übrig), ${V} verliert ${tr(rD.tot)}${rD.abgefangen ? `, ${abfangText(g, rD.abgefangen)}` : ""} (${g.truppen} übrig).`);
     if (c.d?.wirkung.danachAlleTot && g.truppen > 0) { opfer(s, "d", verliere(s, "d", g.truppen)); melde(s, `„Kampf bis zum Letzten“: Alle Truppen von ${V} in ${gname(karte, k.nach)} fallen.`); }
     return nachVerlusten(s, karte, E, D);
   }
@@ -4617,7 +4623,7 @@ const Kampf = (() => {
     if (truppen(s, seite) < 1) return;
     const r = verlusteAn(s, seite, n);
     opfer(s, seite, r.tot);
-    melde(s, `„${karten(s, D)[seite].name}“: ${nameVon(s, seite)} bleibt und verliert ${tr(r.tot)}${r.abgefangen ? ` (der Bunker fängt ${r.abgefangen} ab)` : ""}.`);
+    melde(s, `„${karten(s, D)[seite].name}“: ${nameVon(s, seite)} bleibt und verliert ${tr(r.tot)}${r.abgefangen ? ` (${abfangText(g0(s), r.abgefangen, true)})` : ""}.`);
   }
 
   // ---------- Rückzug ----------
@@ -4642,7 +4648,7 @@ const Kampf = (() => {
       if (g === "a") { const sp = Math.min(rd.vvBudget, feuer); feuer -= sp; rd.vvBudget -= sp; }
       if (feuer && truppen(s, g) > 0) {
         const r = verlusteAn(s, g, feuer);
-        melde(s, `„${c[seite].name}“: ${nameVon(s, g)} verliert ${tr(r.tot)}${r.abgefangen ? ` (der Bunker fängt ${r.abgefangen} ab)` : ""}.`);
+        melde(s, `„${c[seite].name}“: ${nameVon(s, g)} verliert ${tr(r.tot)}${r.abgefangen ? ` (${abfangText(g0(s), r.abgefangen, true)})` : ""}.`);
       }
     }
     rd.rueckzug = seite; rd.ziel = ziel;
@@ -6877,7 +6883,7 @@ const Tests = (() => {
       const fsMit = runde(mitD("feldschanze", 10, 6, { vor: bunker(1) }), "standard", K("feldschanze"));
       const fsVoll = runde(mitD("feldschanze", 10, 6, { vor: bunker() }), "standard", K("feldschanze"));
       t(G3, "Karte 38 Feldschanze: ohne Bunker 2 Verluste abgefangen; mit Bunker +2 Schutzpunkte (höchstens 4)",
-        fsOhne.gebiete.f1.truppen === 5 && rd(fsOhne).bunkerAbgefangen === 2 && fsMit.gebiete.f1.truppen === 6 && fsMit.gebiete.f1.schutzpunkte === 0 &&
+        fsOhne.gebiete.f1.truppen === 5 && rd(fsOhne).bunkerAbgefangen === 2 && fsOhne.protokoll.some(e => /die Feldschanze fängt 2 ab/.test(e.text)) && !fsOhne.protokoll.some(e => /der Bunker fängt/.test(e.text)) && fsMit.gebiete.f1.truppen === 6 && fsMit.gebiete.f1.schutzpunkte === 0 &&
         fsVoll.gebiete.f1.truppen === 6 && fsVoll.gebiete.f1.schutzpunkte === 1);
       const pz = runde(mitA("pluenderzug", 20, 3), K("pluenderzug")), pzNein = runde(mitA("pluenderzug", 10, 10), K("pluenderzug"));
       t(G3, "Karte 39 Plünderzug: 2 Gold aus der Bank bei Eroberung, sonst nichts",
@@ -11513,7 +11519,7 @@ if (typeof module !== "undefined") module.exports = { Tests };
   }, true);
   $("#infofeld").addEventListener("contextmenu", e => { if (zaehlKnopf(e.target.closest("button"))) e.preventDefault(); });
 
-  const VERSION = "3d · 28.11.2026";
+  const VERSION = "3d.1 · 28.11.2026";
   let installHinweis = null;
   const alsApp = () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   function appStatus() {
